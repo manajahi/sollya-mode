@@ -7,9 +7,9 @@
 ;; Created: Thu Jun 25 17:56:02 2015 (+0200)
 ;; Version: 
 ;; Package-Requires: ()
-;; Last-Updated: Thu Jun 25 18:21:20 2015 (+0200)
+;; Last-Updated: Thu Jun 25 18:49:36 2015 (+0200)
 ;;           By: Mohamed Amine Najahi
-;;     Update #: 6
+;;     Update #: 9
 ;; URL: 
 ;; Doc URL: 
 ;; Keywords: 
@@ -84,6 +84,15 @@
   (setq comint-process-echoes t)
   (setq comint-use-prompt-regexp t))
 
+(defconst sollya-keywords
+  '("abs" "absolute" "accurateinfnorm" "acos" "acosh" "asciiplot" "asin" "asinh" "atan" "atanh" "autodiff" "autosimplify" "bashexecute" "begin" "binary" "bind" "boolean" "by" "canonical" "ceil" "chebyshevform" "checkinfnorm" "coeff" "composepolynomials" "constant" "cos" "cosh" "decimal" "default" "degree" "denominator" "diam" "dieonerrormode" "diff" "dirtyfindzeros" "dirtyinfnorm" "dirtyintegral" "display" "do" "double" "doubledouble" "doubleextended" "dyadic" "else" "end" "erf" "erfc" "error" "evaluate" "execute" "exp" "expand" "expm1" "exponent" "externalplot" "externalproc" "false" "file" "findzeros" "fixed" "floating" "floor" "for" "fpfindzeros" "fpminimax" "from" "fullparentheses" "function" "getsuppressedmessages" "guessdegree" "head" "hexadecimal" "honorcoeffprec" "hopitalrecursions" "horner" "if" "implementpoly" "implementconstant" "in" "inf" "infnorm" "integer" "integral" "isbound" "isevaluable" "length" "library" "libraryconstant" "list" "log" "log10" "log1p" "log2" "mantissa" "max" "mid" "midpointmode" "min" "nearestint" "numberroots" "nop" "numerator" "object" "of" "off" "on" "parse" "perturb" "pi" "plot" "points" "postscript" "postscriptfile" "powers" "prec" "precision" "print" "printbinary" "printdouble" "printexpansion" "printfloat" "printhexa" "printsingle" "printxml" "proc" "procedure" "quit" "range" "rationalapprox" "rationalmode" "readfile" "readxml" "relative" "remez" "rename" "restart" "return" "revert" "round" "roundcoefficients" "roundcorrectly" "roundingwarnings" "simplifysafe" "searchgal" "showmessagenumbers" "simplify" "simplifysafe" "sin" "single" "sinh" "sort" "sqrt" "string" "subpoly" "substitute" "sup" "supnorm" "suppressmessage" "tail" "tan" "tanh" "taylor" "taylorform" "taylorrecursions" "then" "time" "timing" "to" "tripledouble" "true" "unsuppressmessage" "var" "verbosity" "version" "void" "while" "worstcase" "write" "zerodenominators"))
+
+(defvar sollya-font-lock-keywords
+  (list
+   ;; highlight all the reserved commands.
+   `(,(concat "\\_<" (regexp-opt sollya-keywords) "\\_>") . font-lock-keyword-face))
+  "Additional expressions to highlight in `sollya-mode'.")
+
 (define-derived-mode sollya-mode comint-mode "Sollya"
   "Major mode for `run-sollya'.
 
@@ -105,19 +114,5 @@
 
 (set (make-local-variable 'font-lock-defaults) '(sollya-font-lock-keywords t))
 
-
-(defconst sollya-keywords
-  '("remez" "connect" "consistencylevel" "count" "create column family"
-    "create keyspace" "del" "decr" "describe cluster" "describe"
-    "drop column family" "drop keyspace" "drop index" "get" "incr" "list"
-    "set" "show api version" "show cluster name" "show keyspaces"
-    "show schema" "truncate" "update column family" "update keyspace" "use"))
-
-(defvar sollya-font-lock-keywords
-  (list
-   ;; highlight all the reserved commands.
-   `(,(concat "\\_<" (regexp-opt sollya-keywords) "\\_>") . font-lock-keyword-face))
-  "Additional expressions to highlight in `sollya-mode'.")
-
-;; define the gappa-mode
 (provide 'sollya-mode)
+
