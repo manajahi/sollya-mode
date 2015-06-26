@@ -1,45 +1,54 @@
+;;; inf-sollya.el --- Sollya inf mode
+
+;;; Commentary:
+;; 
+
 (require 'comint)
 ;(require 'sollya)
+
+;;; Code:
 
 (defvar sollya-display-when-eval t
   "*If true, display the inferior sollya buffer when evaluating expressions.")
 
-(defvar inferior-sollya-mode-hook nil
+(defvar inferior-sollya-mode-hooks nil
   "Hook run after entering `inferior-sollya-mode'.")
 
 (defvar inferior-sollya-program "sollya"
-  "*Program name for invoking an inferior sollya from Emacs.")
+  "Program name for invoking an inferior sollya from Emacs.")
 
-(defvar inferior-sollya-prompt-regexp "^\\(?:\\[[^@]+@[^@]+\\]\\)"
+(defvar inferior-sollya-prompt-regexp "^> ?"
   "Prompt for `inferior-sollya-mode'.")
 
 (defvar inferior-sollya-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
     ;; example definition
-    (define-key map "\C-j" 'newline-and-indent)
-    (define-key map "\t" 'completion-at-point)
+    ;; (define-key map "\C-j" 'newline-and-indent)
+    ;; (define-key map "\t" 'completion-at-point)
     map)
   "Keymap used in `inferior-sollya-mode' buffers.")
 
 (defun inferior-sollya-initialize ()
   "Helper function to initialize inferior-sollya."
   (setq comint-process-echoes t)
-  (setq comint-use-prompt-regexp t))
+  (setq comint-use-prompt-regexp t)
+  nil
+  )
 
 (add-hook 'inferior-sollya-mode-hook 'inferior-sollya-initialize)
 
 (defun inferior-sollya-mode ()
   "Major mode for interacting with an inferior Sollya process.
 Runs a Sollya as a subprocess of Emacs, with I/O through an
-Emacs buffer. A history of input phrases is maintained. Phrases can
+Emacs buffer.  A history of input phrases is maintained.  Phrases can
 be sent from another buffer in sollya mode.
 
 \\{inferior-caml-mode-map}"
   (interactive)
   (comint-mode)
-  (setq comint-prompt-regexp inferior-sollya-prompt-regexp)
+  ;; (setq comint-prompt-regexp inferior-sollya-prompt-regexp)
   (setq major-mode 'inferior-sollya-mode)
-  (setq mode-name "Inferior Sollya")
+  (setq mode-name "Inferior-Sollya")
   (make-local-variable 'paragraph-start)
   (setq paragraph-start (concat "^$\\|" page-delimiter))
   (make-local-variable 'paragraph-separate)
@@ -67,21 +76,22 @@ be sent from another buffer in sollya mode.
   (concat "*" inferior-sollya-buffer-subname "*"))
 
 ;; To show result of evaluation at toplevel
-(defvar inferior-sollya-output nil)
-(defun inferior-sollya-signal-output (s)
-  (if (string-match "[^ ]" s) (setq inferior-sollya-output t)))
+;; (defvar inferior-sollya-output nil)
 
-(defun inferior-sollya-mode-output-hook ()
-  (set-variable 'comint-output-filter-functions
-        (list (function inferior-sollya-signal-output))
-        t))
+;; (defun inferior-sollya-signal-output (s)
+;;   (if (string-match "[^ ]" s) (setq inferior-sollya-output t)))
 
-(add-hook 'inferior-sollya-mode-hooks 'inferior-sollya-mode-output-hook)
+;; (defun inferior-sollya-mode-output-hook ()
+;;   (set-variable 'comint-output-filter-functions
+;;         (list (function inferior-sollya-signal-output))
+;;         t))
+
+;; (add-hook 'inferior-sollya-mode-hooks 'inferior-sollya-mode-output-hook)
 
 
 ;; To launch sollya whenever needed
-
 (defun sollya-run-process-if-needed (&optional cmd)
+  "Run the CMD process if not already done."
   (if (comint-check-proc inferior-sollya-buffer-name) nil
     (if (not cmd)
         (if (comint-check-proc inferior-sollya-buffer-name)
@@ -89,11 +99,14 @@ be sent from another buffer in sollya mode.
           (setq cmd (read-from-minibuffer "Sollya toplevel to run: "
                                           inferior-sollya-program))))
     (setq inferior-sollya-program cmd)
-    (let ((cmdlist (inferior-sollya-args-to-list cmd))
-          (process-connection-type nil))
+    (let ((cmdlist (inferior-sollya-args-to-list cmd)))
+          ;; (process-connection-type nil))
+      ;; (set-buffer (apply (function make-comint)
+      ;;                    inferior-sollya-buffer-subname
+      ;;                    (car cmdlist) nil (cdr cmdlist)))
       (set-buffer (apply (function make-comint)
                          inferior-sollya-buffer-subname
-                         (car cmdlist) nil (cdr cmdlist)))
+                         (car cmdlist) nil))
       (inferior-sollya-mode)
       (display-buffer inferior-sollya-buffer-name)
       t)
@@ -101,14 +114,16 @@ be sent from another buffer in sollya mode.
     ))
 
 
-(defun run-sollya (&optional cmd)
+(defun run-sollya ()
   "Run an inferior sollya process.
 Input and output via buffer `*inferior-sollya*'."
   (interactive
-   (list (if (not (comint-check-proc inferior-sollya-buffer-name))
-             (read-from-minibuffer "Sollya toplevel to run: "
-                                   inferior-sollya-program))))
-  (sollya-run-process-if-needed cmd)
+   ;; (list (if (not (comint-check-proc inferior-sollya-buffer-name))
+   ;;           (read-from-minibuffer "Sollya toplevel to run: "
+   ;;                                 inferior-sollya-program)))
+   )
+  ;; (sollya-run-process-if-needed cmd)
+  (sollya-run-process-if-needed inferior-sollya-program)
   (switch-to-buffer-other-window inferior-sollya-buffer-name))
 
 
@@ -154,38 +169,37 @@ Input and output via buffer `*inferior-sollya*'."
 
 ;; patched to move cursor after evaluation
 (defun inferior-sollya-eval-region (start end)
-  "Send the current region to the inferior OCaml process."
+  "Send the current region to the inferior sollya process."
   (interactive "r")
   (save-excursion (sollya-run-process-if-needed))
   (save-excursion
     (goto-char end)
-    (sollya-skip-comments-backward)
+    ;; (sollya-skip-comments-backward)
     (comint-send-region inferior-sollya-buffer-name start (point))
 
-    ;; AN : à revoir
-    ;; normally, ";;" are part of the region
+    ;; normally, ";" are part of the region
     (if (and (>= (point) 2)
-             (prog2 (backward-char 2) (looking-at ";;")))
+             (prog2 (backward-char 1) (looking-at ";")))
         (comint-send-string inferior-sollya-buffer-name "\n")
-      (comint-send-string inferior-sollya-buffer-name ";;\n"))
+      (comint-send-string inferior-sollya-buffer-name ";\n"))
     ;; the user may not want to see the output buffer
     (if sollya-display-when-eval
         (display-buffer inferior-sollya-buffer-name t))))
 
 
 ;; jump to errors produced by ocaml compiler
-(defun inferior-sollya-goto-error (start end)
-  "Jump to the location of the last error as indicated by inferior toplevel."
-  (interactive "r")
-  ;; (let ((loc (+ start
-  ;;               (save-excursion
-  ;;                 (set-buffer (get-buffer inferior-caml-buffer-name))
-  ;;                 (re-search-backward
-  ;;                  (concat comint-prompt-regexp
-  ;;                          "[ \t]*Characters[ \t]+\\([0-9]+\\)-[0-9]+:$"))
-  ;;                 (caml-string-to-int (match-string 1))))))
-  ;;   (goto-char loc))
-  )
+;; (defun inferior-sollya-goto-error (start end)
+;;   "Jump to the location of the last error as indicated by inferior toplevel."
+;;   (interactive "r")
+;;   ;; (let ((loc (+ start
+;;   ;;               (save-excursion
+;;   ;;                 (set-buffer (get-buffer inferior-caml-buffer-name))
+;;   ;;                 (re-search-backward
+;;   ;;                  (concat comint-prompt-regexp
+;;   ;;                          "[ \t]*Characters[ \t]+\\([0-9]+\\)-[0-9]+:$"))
+;;   ;;                 (caml-string-to-int (match-string 1))))))
+;;   ;;   (goto-char loc))
+;;   )
 
 
 
@@ -250,3 +264,7 @@ Input and output via buffer `*inferior-sollya*'."
 
 (provide 'inf-sollya)
 
+
+(provide 'inf-sollya)
+
+;;; inf-sollya.el ends here
