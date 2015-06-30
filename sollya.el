@@ -7,9 +7,9 @@
 ;; Created: Mon Jun 29 13:50:25 2015 (+0200)
 ;; Version: 
 ;; Package-Requires: ()
-;; Last-Updated: Mon Jun 29 20:52:09 2015 (+0200)
+;; Last-Updated: Tue Jun 30 19:07:05 2015 (+0200)
 ;;           By: Mohamed Amine Najahi
-;;     Update #: 43
+;;     Update #: 150
 ;; URL: 
 ;; Doc URL: 
 ;; Keywords: 
@@ -100,7 +100,7 @@
 
 ;; generate regex string for each category of keywords
 (defconst sollya-keywords-regexp (regexp-opt sollya-keywords 'words))
-(defconst sollya-type-regexp (regexp-opt sollya-types 'words))
+(defconst sollya-types-regexp (regexp-opt sollya-types 'words))
 (defconst sollya-constant-regexp (regexp-opt sollya-constants 'words))
 (defconst sollya-event-regexp (regexp-opt sollya-events 'words))
 (defconst sollya-functions-regexp (regexp-opt sollya-functions 'words))
@@ -109,28 +109,62 @@
 (defconst sollya-strings (concat "\\(\\(\"\\|" line-prefix "[ \t]*\\\\\\)\\([^\"\\\\\n]\\|\\\\.\\)*\\(\"\\|\\\\[ \t]*$\\)\\|'\\([^'\\\\\n]\\|\\\\.[^'\n]*\\)'\\)")
   "Hijacked from Haskell mode."
   )
-;; (rx symbol-start "def" (1+ space) (group (1+ (or word ?_))))
-;; (defconst sollya-function-name (rx symbol-start (group (1+ (or word ?_))) (1+ space) "="  (1+ space) "proc")
-;;   "..."
-;;   )
-(defconst sollya-function-name (rx symbol-start (group (1+ (or word ?_))) (1+ space) (or "=" ":="))
+
+(defconst sollya-function-name (rx symbol-start (group (1+ (or word ?_))) (1+ space) (or "=" ":=")  (1+ space) "proc")
   "..."
   )
+
+;; (defconst sollya-variable-name (rx "var" (1+ space) (group (1+ (or word ?_)))
+;; 				   (0+ (0+ space) "," (0+ space)
+;; 				       (group (1+ (or word ?_))) (0+ space))
+;; 				   (0+ space) ";"
+;; 				   )
+;;   "..."
+;;   )
+
+(defconst sollya-variable-name (rx "var" (1+ (0+ space)
+					     (group (1+ (or word ?_)))
+					     (0+ space)
+					     (or "," ";")
+					     (0+ space)))
+  "..."
+  )
+
+
+;; (defun sollya-variable-function (limit)
+;;   (let ((re (rx "sharm"))
+;; 	(res nil))
+;;     (while (and (setq res (re-search-forward re limit t))
+;; 		(goto-char (match-end 1))))
+;;     res))
 
 ;; create the list for font-lock.
 ;; each category of keyword is given a particular face
 (defconst sollya-font-lock-keywords
   `(
-    (,sollya-type-regexp . font-lock-type-face)
+    (,sollya-function-name (1 font-lock-function-name-face))
+    ;; (,sollya-variable-name (0 font-lock-variable-name-face nil nil))
+
+    ("\\_<var "
+     (0 font-lock-type-face)
+     ("\\_<\\w+,*\\_>"
+    	;; Pre-match form -- limit the sub-search to the end of the argument list.
+      (save-excursion
+	(goto-char (search-forward-regexp ";"))
+	;; (backward-char)
+	(point))
+      ;; Post-match form
+      (goto-char (match-end 0))
+      (0 font-lock-variable-name-face)))
+    ;; (sollya-variable-function (1 font-lock-variable-name-face t t))
+    (,sollya-types-regexp . font-lock-type-face)
     (,sollya-constant-regexp . font-lock-constant-face)
     (,sollya-event-regexp . font-lock-builtin-face)
     (,sollya-functions-regexp . font-lock-function-name-face)
     (,sollya-builtin-regexp . font-lock-builtin-face)
     (,sollya-keywords-regexp . font-lock-keyword-face)
-    (,sollya-strings . font-lock-string-face)
-    (,sollya-function-name . font-lock-function-name-face)
-    "Minimal highlighting expressions for `sollya-mode'."
-      ))
+    (,sollya-strings . (1 font-lock-string-face))
+    "Minimal highlighting expressions for `sollya-mode'."))
 
 ;; (defconst sollya-font-lock-keywords
 ;;   `(
