@@ -4,14 +4,14 @@
 ;; 
 
 (require 'comint)
-;(require 'sollya)
+(require 'sollya-fonts)
 
 ;;; Code:
 
 (defvar sollya-display-when-eval t
   "*If true, display the inferior sollya buffer when evaluating expressions.")
 
-(defvar inferior-sollya-mode-hooks nil
+(defvar inferior-sollya-mode-hook nil
   "Hook run after entering `inferior-sollya-mode'.")
 
 (defvar inferior-sollya-program "sollya"
@@ -22,9 +22,12 @@
 
 (defvar inferior-sollya-mode-map
   (let ((map (nconc (make-sparse-keymap) comint-mode-map)))
-    ;; example definition
-    ;; (define-key map "\C-j" 'newline-and-indent)
-    ;; (define-key map "\t" 'completion-at-point)
+    (define-key map "\C-c\C-i" 'sollya-interrupt-sollya)
+    (define-key map "\C-c\C-k" 'sollya-kill-sollya)
+    ;; (define-key map "\C-m" 'sollya-interactive-send-input)
+    ;; (define-key map "\C-j" 'sollya-interactive-send-input-or-indent)
+    ;; (define-key map "\M-\C-m" 'sollya-interactive-send-input-end-of-phrase)
+    (define-key map "\t" 'completion-at-point)
     map)
   "Keymap used in `inferior-sollya-mode' buffers.")
 
@@ -46,9 +49,10 @@ be sent from another buffer in sollya mode.
 \\{inferior-caml-mode-map}"
   (interactive)
   (comint-mode)
-  ;; (setq comint-prompt-regexp inferior-sollya-prompt-regexp)
+  (setq comint-prompt-regexp inferior-sollya-prompt-regexp)
   (setq major-mode 'inferior-sollya-mode)
   (setq mode-name "Inferior-Sollya")
+
   (make-local-variable 'paragraph-start)
   (setq paragraph-start (concat "^$\\|" page-delimiter))
   (make-local-variable 'paragraph-separate)
@@ -57,7 +61,8 @@ be sent from another buffer in sollya mode.
   (setq paragraph-ignore-fill-prefix t)
   (make-local-variable 'require-final-newline)
   (setq require-final-newline t)
-  (make-local-variable 'comment-start)
+  (use-local-map inferior-sollya-mode-map)
+
   (setq comment-start "\\*")
   (make-local-variable 'comment-end)
   (setq comment-end "*\\")
@@ -65,10 +70,20 @@ be sent from another buffer in sollya mode.
   (setq comment-column 40)
   (make-local-variable 'comment-start-skip)
   (setq comment-start-skip "(\\*+ *")
+  (set (make-local-variable 'font-lock-defaults)
+       '(sollya-font-lock-keywords
+         nil ;; keywords-only
+         nil ;; case-fold
+         ((?_ . "w")     
+          (?\/ . ". 124")
+          (?* . ". 23b") 
+  	  (?\n . ">"))
+	 )
+       )
   (make-local-variable 'parse-sexp-ignore-comments)
   (setq parse-sexp-ignore-comments nil)
-  (use-local-map inferior-sollya-mode-map)
-  (run-hooks 'inferior-sollya-mode-hooks))
+  (run-hooks 'inferior-sollya-mode-hook)
+  )
 
 
 (defconst inferior-sollya-buffer-subname "inferior-sollya")
@@ -89,7 +104,6 @@ be sent from another buffer in sollya mode.
 ;; (add-hook 'inferior-sollya-mode-hooks 'inferior-sollya-mode-output-hook)
 
 
-;; To launch sollya whenever needed
 (defun sollya-run-process-if-needed (&optional cmd)
   "Run the CMD process if not already done."
   (if (comint-check-proc inferior-sollya-buffer-name) nil
@@ -117,12 +131,7 @@ be sent from another buffer in sollya mode.
 (defun run-sollya ()
   "Run an inferior sollya process.
 Input and output via buffer `*inferior-sollya*'."
-  (interactive
-   ;; (list (if (not (comint-check-proc inferior-sollya-buffer-name))
-   ;;           (read-from-minibuffer "Sollya toplevel to run: "
-   ;;                                 inferior-sollya-program)))
-   )
-  ;; (sollya-run-process-if-needed cmd)
+  (interactive)
   (sollya-run-process-if-needed inferior-sollya-program)
   (switch-to-buffer-other-window inferior-sollya-buffer-name))
 
@@ -178,93 +187,27 @@ Input and output via buffer `*inferior-sollya*'."
     (comint-send-region inferior-sollya-buffer-name start (point))
 
     ;; normally, ";" are part of the region
-    (if (and (>= (point) 2)
-             (prog2 (backward-char 1) (looking-at ";")))
-        (comint-send-string inferior-sollya-buffer-name "\n")
-      (comint-send-string inferior-sollya-buffer-name ";\n"))
+    ;; (if (and (>= (point) 1)
+    ;;          (prog2 (backward-char 1) (looking-at ";")))
+    ;;     (comint-send-string inferior-sollya-buffer-name "\n")
+    ;;   (comint-send-string inferior-sollya-buffer-name "\n"))
+    (comint-send-string inferior-sollya-buffer-name "\n")
     ;; the user may not want to see the output buffer
     (if sollya-display-when-eval
         (display-buffer inferior-sollya-buffer-name t))))
 
+(defun sollya-interrupt-sollya ()
+  (interactive)
+  (when (comint-check-proc inferior-sollya-buffer-name)
+    (with-current-buffer inferior-sollya-buffer-name
+      (comint-interrupt-subjob))))
 
-;; jump to errors produced by ocaml compiler
-;; (defun inferior-sollya-goto-error (start end)
-;;   "Jump to the location of the last error as indicated by inferior toplevel."
-;;   (interactive "r")
-;;   ;; (let ((loc (+ start
-;;   ;;               (save-excursion
-;;   ;;                 (set-buffer (get-buffer inferior-caml-buffer-name))
-;;   ;;                 (re-search-backward
-;;   ;;                  (concat comint-prompt-regexp
-;;   ;;                          "[ \t]*Characters[ \t]+\\([0-9]+\\)-[0-9]+:$"))
-;;   ;;                 (caml-string-to-int (match-string 1))))))
-;;   ;;   (goto-char loc))
-;;   )
-
-
-
-
-;; (defun run-sollya ()
-;;   "Run an inferior instance of `sollya-cli' inside Emacs."
-;;   (interactive)
-;;   (let* ((sollya-program sollya-cli-file-path)
-;;          (buffer (comint-check-proc "Sollya")))
-;;     ;; pop to the "*Sollya*" buffer if the process is dead, the
-;;     ;; buffer is missing or it's got the wrong mode.
-;;     (pop-to-buffer-same-window
-;;      (if (or buffer (not (derived-mode-p 'sollya-mode))
-;;              (comint-check-proc (current-buffer)))
-;;          (get-buffer-create (or buffer "*Sollya*"))
-;;        (current-buffer)))
-;;     ;; create the comint process if there is no buffer.
-;;     (unless buffer
-;;       (apply 'make-comint-in-buffer "Sollya" buffer
-;;              sollya-program sollya-cli-arguments)
-;;       (sollya-mode))))
-
-;; ;; Use Sollya hook to set some comint variables
-;; (add-hook 'sollya-mode-hook 'sollya--initialize)
-
-;; (defun sollya--initialize ()
-;;   "Helper function to initialize Sollya."
-;;   (setq comint-process-echoes t)
-;;   (setq comint-use-prompt-regexp t))
-
-;; (define-derived-mode inf-sollya comint-mode "inf-sollya"
-;;   "Major mode for editing Sollya files and using `run-sollya'.
-
-;; \\<sollya-mode-map>"
-;;   (set-syntax-table sollya-mode-syntax-table)
-;;   (use-local-map sollya-mode-map)
-
-;;   (setq major-mode 'sollya-mode)
-;;   (setq mode-name "Sollya")
-
-;;   (setq comment-start "\\*")
-;;   (make-local-variable 'comment-end)
-;;   (setq comment-end "*\\")
-;;   (make-local-variable 'comment-column)
-;;   (setq comment-column 40)
-;;   (make-local-variable 'comment-start-skip)
-;;   (setq comment-start-skip "(\\*+ *")
-
-;;   ;; set up the prompt
-;;   (setq comint-prompt-regexp sollya-prompt-regexp)
-
-;;   ;; make the buffer read only.
-;;   ;; a contentious subject as some prefer the buffer to be overwritable.
-;;   (setq comint-prompt-read-only t)
-;;   (set (make-local-variable 'font-lock-defaults) '(sollya-font-lock-keywords t))
-;;   ;;  (set (make-local-variable 'paragraph-start) sollya-prompt-regexp)
-;;   (run-hooks 'sollya-mode-hook))
-
-;; ;;;###autoload
-;; (add-to-list 'auto-mode-alist '("\\.sol\\'" . sollya-mode))
-;; (add-to-list 'auto-mode-alist '("\\.sollya\\'" . sollya-mode))
-
-(provide 'inf-sollya)
+(defun sollya-kill-sollya ()
+  (interactive)
+  (when (comint-check-proc inferior-sollya-buffer-name)
+    (with-current-buffer inferior-sollya-buffer-name
+      (comint-kill-subjob))))
 
 
 (provide 'inf-sollya)
-
 ;;; inf-sollya.el ends here
