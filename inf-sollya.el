@@ -74,9 +74,9 @@ be sent from another buffer in sollya mode.
        '(sollya-font-lock-keywords
          nil ;; keywords-only
          nil ;; case-fold
-         ((?_ . "w")     
+         ((?_ . "w")
           (?\/ . ". 124")
-          (?* . ". 23b") 
+          (?* . ". 23b")
   	  (?\n . ">"))
 	 )
        )
@@ -137,20 +137,22 @@ Input and output via buffer `*inferior-sollya*'."
 
 
 (defun inferior-sollya-args-to-list (string)
+  "Transform the arguments given to launch the prompt inside STRING into a list."
   (let ((where (string-match "[ \t]" string)))
     (cond ((null where) (list string))
           ((not (= where 0))
            (cons (substring string 0 where)
                  (inferior-sollya-args-to-list (substring string (+ 1 where)
-                                                        (length string)))))
+							  (length string)))))
           (t (let ((pos (string-match "[^ \t]" string)))
                (if (null pos)
                    nil
                  (inferior-sollya-args-to-list (substring string pos
-                                                        (length string)))))))))
+							  (length string)))))))))
 
 
 (defun inferior-sollya-show-subshell ()
+  "Show the inferior-sollya buffer."
   (interactive)
   (sollya-run-process-if-needed)
   (display-buffer inferior-sollya-buffer-name)
@@ -197,12 +199,14 @@ Input and output via buffer `*inferior-sollya*'."
         (display-buffer inferior-sollya-buffer-name t))))
 
 (defun sollya-interrupt-sollya ()
+  "Interrupt the Sollya process."
   (interactive)
   (when (comint-check-proc inferior-sollya-buffer-name)
     (with-current-buffer inferior-sollya-buffer-name
       (comint-interrupt-subjob))))
 
 (defun sollya-kill-sollya ()
+  "Kill the Sollya process."
   (interactive)
   (when (comint-check-proc inferior-sollya-buffer-name)
     (with-current-buffer inferior-sollya-buffer-name
